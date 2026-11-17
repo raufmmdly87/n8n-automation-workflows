@@ -1,0 +1,548 @@
+{
+  "name": "Social Media Publisher",
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "image",
+        "prompt": "={{ $json.body.prompt }}",
+        "options": {
+          "returnImageUrls": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -80,
+        580
+      ],
+      "id": "848b632d-978f-51e8-833a-35de1e8977a9",
+      "name": "OpenAI",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "social-post",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -940,
+        440
+      ],
+      "id": "e558f2c5-0d53-5416-964f-0227f94e72d0",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Webhook').item.json.body.prompt }}",
+        "options": {
+          "systemMessage": "Using the prompt from the user, write a short caption for a social media post. The caption goes with an image that is also generated from this prompt. Keep it short and engaging; you may use hashtags and emojis. Return only the post text, with no comments or additions before or after it, because your answer will be copied directly into the post."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        260,
+        580
+      ],
+      "id": "e6ff67bb-d7ed-5ab0-a1e1-c4691c6806aa",
+      "name": "AI Agent",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-preview-04-17",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        200,
+        760
+      ],
+      "id": "acab692b-5016-5273-9a95-20a1d5e35249",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your-frontend.example.com/api/receive-content",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "Text",
+              "value": "={{ $json.output }}"
+            },
+            {
+              "name": "image",
+              "value": "={{ $('OpenAI').item.json.url }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        580
+      ],
+      "id": "a15a379b-efe0-5e46-9498-eb9a2539bf27",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.body.text }}",
+        "shareMediaCategory": "IMAGE",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [
+        280,
+        0
+      ],
+      "id": "293d992b-7da7-59b8-9f46-95a112de8572",
+      "name": "LinkedIn",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "httpRequestMethod": "POST",
+        "graphApiVersion": "v22.0",
+        "node": "YOUR_FACEBOOK_PAGE_ID",
+        "edge": "photos",
+        "options": {
+          "queryParameters": {
+            "parameter": [
+              {
+                "name": "message",
+                "value": "={{ $json.body.text }}"
+              },
+              {
+                "name": "url",
+                "value": "={{ $json.body.imageUrl }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        140,
+        200
+      ],
+      "id": "6b15a16b-9654-5c15-b312-c9885f9216ac",
+      "name": "Facebook Graph API"
+    },
+    {
+      "parameters": {
+        "httpRequestMethod": "POST",
+        "graphApiVersion": "v22.0",
+        "node": "YOUR_INSTAGRAM_ACCOUNT_ID",
+        "edge": "media",
+        "options": {
+          "queryParameters": {
+            "parameter": [
+              {
+                "name": "image_url",
+                "value": "={{ $json.body.imageUrl }}"
+              },
+              {
+                "name": "caption",
+                "value": "={{ $json.body.text }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        20,
+        380
+      ],
+      "id": "3e055f68-3493-578d-b09a-d5a658fa2d79",
+      "name": "IG API"
+    },
+    {
+      "parameters": {
+        "httpRequestMethod": "POST",
+        "graphApiVersion": "v22.0",
+        "node": "YOUR_INSTAGRAM_ACCOUNT_ID",
+        "edge": "media_publish",
+        "options": {
+          "queryParameters": {
+            "parameter": [
+              {
+                "name": "image_url",
+                "value": "={{ $('If1').item.json.body.imageUrl }}"
+              },
+              {
+                "name": "creation_id",
+                "value": "={{ $json.id }}"
+              },
+              {
+                "name": "caption",
+                "value": "={{ $('If1').item.json.body.text }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        300,
+        380
+      ],
+      "id": "36d39ba5-26f5-5e36-97b9-b970d0860f08",
+      "name": "IG TO POST"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "68ebf968-3df8-4622-9230-d16e40be53c1",
+              "leftValue": "={{ $json.body.action }}",
+              "rightValue": "onayla",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -780,
+        440
+      ],
+      "id": "5926b2b8-06a0-5228-a81c-2ff8f4b5d114",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.imageUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "bd51bbae-841f-5c2c-9538-797d92ab70c3",
+      "name": "HTTP Request1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const createdAt = new Date().toISOString();\nconst groupId = `POST_${createdAt}`;\n\nreturn [\n  {\n    json: {\n      platform: \"Instagram\",\n      postIdOrUrn: $node[\"IG TO POST\"].json.id || \"undefined\",\n      createdAt,\n      groupId\n    }\n  },\n  {\n    json: {\n      platform: \"Facebook\",\n      postIdOrUrn: $node[\"Facebook Graph API\"].json.post_id || \"undefined\",\n      createdAt,\n      groupId\n    }\n  },\n  {\n    json: {\n      platform: \"LinkedIn\",\n      postIdOrUrn: $node[\"LinkedIn\"].json.urn || \"undefined\",\n      createdAt,\n      groupId\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        220
+      ],
+      "id": "0c1b4276-499f-5579-83be-4b1326938061",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        520,
+        220
+      ],
+      "id": "3e962554-f711-59c8-a908-774aa735eb07",
+      "name": "Merge"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        920,
+        220
+      ],
+      "id": "ba3de8a9-aabc-5d78-9e2e-849e799604b1",
+      "name": "Wait"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SOCIAL_LOG_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Data social"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "ig"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            " createdAt": "={{ $now }}",
+            "postIdOrUrn": "={{ $json.postIdOrUrn }}\n",
+            "platform": "={{ $json.platform }}",
+            "groupID": "={{ $json.groupId }}"
+          },
+          "matchingColumns": [
+            "postIdOrUrn"
+          ],
+          "schema": [
+            {
+              "id": "platform",
+              "displayName": "platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "postIdOrUrn",
+              "displayName": "postIdOrUrn",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": " createdAt",
+              "displayName": " createdAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "groupID",
+              "displayName": "groupID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        1120,
+        220
+      ],
+      "id": "ec27cdb9-e159-5385-b744-01a446751adc",
+      "name": "Append or update row in sheet"
+    }
+  ],
+  "connections": {
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LinkedIn": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IG API": {
+      "main": [
+        [
+          {
+            "node": "IG TO POST",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "IG API",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Facebook Graph API",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Facebook Graph API": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "IG TO POST": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

@@ -1,0 +1,424 @@
+{
+  "name": "AI Financial Report",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        180
+      ],
+      "id": "67e8fb90-054b-525f-830f-89b467eb5177",
+      "name": "Date & Time"
+    },
+    {
+      "parameters": {
+        "jsCode": "const currentDate = new Date($input.item.json.currentDate);\n\n// Get the year and month\nlet year = currentDate.getFullYear();\nlet month = currentDate.getMonth(); // already 0-based!\n\n// Calculate the previous month\nif (month === 0) {\n  month = 11;\n  year = year - 1;\n} else {\n  month = month - 1;\n}\n\n// First day of the previous month\nconst startDate = new Date(year, month, 1);\n\n// Last day of the previous month\nconst endDate = new Date(year, month + 1, 0);\n\nreturn {\n  json: {\n    previousMonthStart: startDate.toISOString().split('T')[0],\n    previousMonthEnd: endDate.toISOString().split('T')[0]\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        20
+      ],
+      "id": "4c88b6cc-debe-5df0-aa9a-05a652fbeb9f",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "Revenue"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        140,
+        180
+      ],
+      "id": "99bfa838-c29b-58d1-90a9-ce7c23a10a2e",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "jsCode": "const totalRevenue = $json.Revenue.reduce((acc, val) => acc + val, 0);\n\n// Take CostCenterID from the previous node\nconst costCenterId = $node[\"Get row(s) in sheet\"].json[\"CostCenterID\"];\n\nreturn {\n  json: {\n    CostCenterID: costCenterId,  // read dynamically\n    TotalRevenue: totalRevenue\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ],
+      "id": "ce54acac-5e0b-5fbc-bb95-c5045d7d8fcc",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "CostCenterID",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        540,
+        20
+      ],
+      "id": "0c5e88be-6cb5-5ef8-b823-bb4165cf1f2b",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $json.WorkInProgress / $json.TotalRevenue;\nreturn { json: { ...$json, Result: result } }\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        200
+      ],
+      "id": "4295828b-8d74-53e7-9f01-ac8163f38a9c",
+      "name": "Code3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Read the merged data\nconst { Date, CostCenterID, WorkInProgress, TotalRevenue, Result } = $json;\n\n// Build a sample executive summary\nconst executiveSummary = \"Revenue grew strongly, with good profitability across cost centers.\";\n\n// Financial summary (sample values)\nconst financialSummary = {\n  budgetYTD: 200000,\n  actualYTD: TotalRevenue,\n  variance: TotalRevenue - 200000\n};\n\n// Business unit performance (sample values)\nconst businessUnit = [\n  { unit: \"Retail Division\", revenue: 38000, expense: 28000, profit: 10000 },\n  { unit: \"AI Projects\", revenue: 45000, expense: 18000, profit: 27000 },\n  { unit: \"Cloud Services\", revenue: 15000, expense: 20000, profit: -5000 }\n];\n\n// Recommendations\nconst recommendations = [\n  \"Continue investing in AI\",\n  \"Optimize logistics\",\n  \"Monitor cloud costs\",\n  \"Consider team expansion\"\n];\n\n// Final JSON output\nreturn {\n  json: {\n    date: Date,\n    costCenter: CostCenterID,\n    executiveSummary,\n    financialSummary,\n    businessUnit,\n    recommendations\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        820,
+        20
+      ],
+      "id": "dca5aafc-3e8c-53c5-b68c-173b74bd0076",
+      "name": "Code4"
+    },
+    {
+      "parameters": {
+        "jsCode": "const { date, costCenter, executiveSummary, financialSummary, businessUnit, recommendations } = $json;\n\nlet html = `\n  <div style=\"font-family: Arial, sans-serif; color: #333; max-width: 700px; margin: auto;\">\n\n    <h2 style=\"color: #2c3e50; border-bottom: 2px solid #2c3e50; padding-bottom: 5px;\">📊 Financial Performance Report</h2>\n    <p><strong>Date:</strong> ${date}</p>\n    <p><strong>Cost Center:</strong> ${costCenter}</p>\n\n    <h3 style=\"background-color:#3a6ea5; color:white; padding:8px; border-radius:5px;\">1️⃣ Executive Summary</h3>\n    <p style=\"line-height: 1.5;\">${executiveSummary}</p>\n\n    <h3 style=\"background-color:#3a6ea5; color:white; padding:8px; border-radius:5px;\">2️⃣ Financial Summary</h3>\n    <table style=\"width:100%; border-collapse:collapse; margin-bottom:20px;\">\n      <thead>\n        <tr style=\"background-color:#f2f2f2;\">\n          <th style=\"padding:10px; border:1px solid #ddd;\">Budget YTD</th>\n          <th style=\"padding:10px; border:1px solid #ddd;\">Actual YTD</th>\n          <th style=\"padding:10px; border:1px solid #ddd;\">Variance</th>\n        </tr>\n      </thead>\n      <tbody>\n        <tr>\n          <td style=\"padding:10px; border:1px solid #ddd;\">${financialSummary.budgetYTD.toLocaleString()}</td>\n          <td style=\"padding:10px; border:1px solid #ddd;\">${financialSummary.actualYTD.toLocaleString()}</td>\n          <td style=\"padding:10px; border:1px solid #ddd;\">${financialSummary.variance.toLocaleString()}</td>\n        </tr>\n      </tbody>\n    </table>\n\n    <h3 style=\"background-color:#3a6ea5; color:white; padding:8px; border-radius:5px;\">3️⃣ Business Unit Performance</h3>\n    <table style=\"width:100%; border-collapse:collapse; margin-bottom:20px;\">\n      <thead>\n        <tr style=\"background-color:#f2f2f2;\">\n          <th style=\"padding:10px; border:1px solid #ddd;\">Unit</th>\n          <th style=\"padding:10px; border:1px solid #ddd;\">Revenue</th>\n          <th style=\"padding:10px; border:1px solid #ddd;\">Expense</th>\n          <th style=\"padding:10px; border:1px solid #ddd;\">Profit</th>\n        </tr>\n      </thead>\n      <tbody>\n        ${businessUnit.map(unit => `\n          <tr>\n            <td style=\"padding:10px; border:1px solid #ddd;\">${unit.unit}</td>\n            <td style=\"padding:10px; border:1px solid #ddd;\">${unit.revenue.toLocaleString()}</td>\n            <td style=\"padding:10px; border:1px solid #ddd;\">${unit.expense.toLocaleString()}</td>\n            <td style=\"padding:10px; border:1px solid #ddd;\">${unit.profit.toLocaleString()}</td>\n          </tr>\n        `).join(\"\")}\n      </tbody>\n    </table>\n\n    <h3 style=\"background-color:#3a6ea5; color:white; padding:8px; border-radius:5px;\">4️⃣ Recommendations</h3>\n    <ul style=\"line-height: 1.5;\">\n      ${recommendations.map(r => `<li>${r}</li>`).join(\"\")}\n    </ul>\n\n    <p style=\"font-size: 12px; color: #777;\">📧 This report is generated automatically by n8n workflow.</p>\n  </div>\n`;\n\nreturn {\n  json: {\n    subject: `Financial Report for ${date}`,\n    body: html\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        200
+      ],
+      "id": "09b7dafc-411e-56c7-be37-8f5fa8445432",
+      "name": "Code5"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -540,
+        20
+      ],
+      "id": "59b4e1fd-bde4-56c4-832f-e3e8154ded31",
+      "name": "Telegram Trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an AI assistant for business reporting. The following email contains a financial report in HTML format. Do not modify the HTML structure, CSS, tables, or formatting. \n\nOnly read and analyze the content. At the end of the email (after all existing content), add a short paragraph starting with \"AI Analysis:\" that summarizes or gives a brief insight based on the financial data. Keep the analysis short (2-3 sentences), insightful, and professional.\n\nHere is the email content:\n{{ $json.body }}\n\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1180,
+        200
+      ],
+      "id": "1dad40cd-197e-50fc-8f14-1ebe690e8479",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1060,
+        360
+      ],
+      "id": "24f042a1-ca56-58d6-963e-0f091979799a",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_FINANCE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "8n8_demo_dataset"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1191451782,
+          "mode": "list",
+          "cachedResultName": "CostCenters"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -140,
+        180
+      ],
+      "id": "0033da90-6177-58ae-baea-dcac1901cc26",
+      "name": "Get row(s) in sheet"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_FINANCE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "8n8_demo_dataset"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1066879135,
+          "mode": "list",
+          "cachedResultName": "Revenue"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        0,
+        0
+      ],
+      "id": "755c4692-e011-5756-a5de-d57d76727b83",
+      "name": "Get row(s) in sheet1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_FINANCE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "8n8_demo_dataset"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 904745960,
+          "mode": "list",
+          "cachedResultName": "WIP"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        400,
+        180
+      ],
+      "id": "1398b291-f80c-57a1-8637-29001f43f3a0",
+      "name": "Get row(s) in sheet2"
+    },
+    {
+      "parameters": {
+        "sendTo": "reports@example.com",
+        "subject": "={{ $('Code5').item.json.subject }}",
+        "message": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1300,
+        480
+      ],
+      "id": "3cb33145-4add-5fbe-886f-b58678040ebc",
+      "name": "Send a message"
+    }
+  ],
+  "connections": {
+    "Date & Time": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Code3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code3": {
+      "main": [
+        [
+          {
+            "node": "Code4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code4": {
+      "main": [
+        [
+          {
+            "node": "Code5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code5": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Date & Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet2": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
