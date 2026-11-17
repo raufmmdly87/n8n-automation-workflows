@@ -31,7 +31,7 @@ flowchart LR
 
 **How it works**
 
-1. A web frontend sends a prompt to the webhook.
+1. A web frontend that I built sends a prompt to the webhook. **[Frontend demo](https://n8n-media.vercel.app/)** (UI only; the backend is no longer connected since the internship ended).
 2. **Draft step:** OpenAI generates an image, and an AI agent running on Gemini writes a short caption with hashtags and emojis. The draft is sent back to the frontend for preview.
 3. **Approval step:** when the user approves the draft, the frontend calls the webhook again with `action: "onayla"` ("approve" in Turkish).
 4. The post is published to **Instagram** (two-step create + publish via the Graph API) and **Facebook** at the same time. A LinkedIn branch is prepared but disabled.
